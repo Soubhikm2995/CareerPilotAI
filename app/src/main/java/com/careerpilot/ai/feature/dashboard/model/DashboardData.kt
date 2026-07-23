@@ -1,7 +1,7 @@
 package com.careerpilot.ai.feature.dashboard.model
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Person
@@ -33,14 +33,14 @@ object DashboardData {
         DashboardFeature(
             title = "ATS Scanner",
             description = "Analyze ATS compatibility",
-            icon = Icons.Default.Article,
+            icon = Icons.AutoMirrored.Filled.Article,
             route = Routes.RESUME
         ),
         DashboardFeature(
             title = "Cover Letter",
             description = "Generate professional cover letters",
             icon = Icons.Default.Badge,
-            route = Routes.RESUME
+            route = Routes.COVER_LETTER
         ),
         DashboardFeature(
             title = "Profile",
