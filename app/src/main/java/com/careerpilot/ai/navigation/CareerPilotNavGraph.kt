@@ -1,5 +1,6 @@
 package com.careerpilot.ai.navigation
 
+
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -11,6 +12,9 @@ import com.careerpilot.ai.feature.resume.ui.JobTrackerScreen
 import com.careerpilot.ai.feature.resume.ui.ProfileScreen
 import com.careerpilot.ai.feature.resume.ui.ResumeScreen
 import com.careerpilot.ai.feature.splash.ui.SplashScreen
+import com.careerpilot.ai.feature.auth.ui.LoginScreen
+import com.careerpilot.ai.feature.auth.ui.RegisterScreen
+import com.careerpilot.ai.feature.auth.ui.ForgotPasswordScreen
 
 @Composable
 fun CareerPilotNavGraph() {
@@ -49,5 +53,18 @@ fun CareerPilotNavGraph() {
         composable(Routes.PROFILE) {
             ProfileScreen()
         }
+
+        composable(Routes.LOGIN) {
+            LoginScreen(navController = navController)
+        }
+
+        composable(Routes.REGISTER) {
+            RegisterScreen(navController = navController)
+        }
+
+        composable(Routes.FORGOT_PASSWORD) {
+            ForgotPasswordScreen(navController = navController)
+        }
     }
 }
+

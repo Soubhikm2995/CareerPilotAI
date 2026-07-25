@@ -9,20 +9,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.careerpilot.ai.feature.auth.viewmodel.AuthViewModel
 import com.careerpilot.ai.navigation.Routes
 import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(
-    navController: NavController
+    navController: NavController,
+    viewModel: AuthViewModel = hiltViewModel()
 ) {
 
     LaunchedEffect(Unit) {
 
         delay(2000)
 
-        navController.navigate(Routes.DASHBOARD) {
+        val destination =
+            if (viewModel.isUserLoggedIn()) {
+                Routes.DASHBOARD
+            } else {
+                Routes.LOGIN
+            }
+
+        navController.navigate(destination) {
             popUpTo(Routes.SPLASH) {
                 inclusive = true
             }

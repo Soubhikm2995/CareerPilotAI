@@ -10,4 +10,9 @@ object Routes {
     const val INTERVIEW = "interview"
     const val JOBS = "jobs"
     const val PROFILE = "profile"
+
+    const val LOGIN = "login"
+    const val REGISTER = "register"
+    const val FORGOT_PASSWORD = "forgot_password"
+
 }
