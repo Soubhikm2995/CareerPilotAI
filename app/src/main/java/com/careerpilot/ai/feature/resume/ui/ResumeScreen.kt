@@ -9,12 +9,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,6 +30,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.careerpilot.ai.feature.resume.data.ResumeTextExtractor
+import com.careerpilot.ai.feature.resume.model.AtsAnalysisResult
+import com.careerpilot.ai.feature.resume.usecase.AnalyzeResumeUseCase
+import com.careerpilot.ai.feature.resume.usecase.CalculateScoreUseCase
+import com.careerpilot.ai.feature.resume.usecase.ExtractKeywordsUseCase
 import com.careerpilot.ai.ui.components.CPGradientBackground
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -55,6 +63,37 @@ fun ResumeScreen() {
         mutableStateOf<String?>(null)
     }
 
+    var jobDescription by remember {
+        mutableStateOf("")
+    }
+
+    var analysisResult by remember {
+        mutableStateOf<AtsAnalysisResult?>(null)
+    }
+
+    var isAnalyzing by remember {
+        mutableStateOf(false)
+    }
+
+    var analysisError by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    val extractKeywordsUseCase = remember {
+        ExtractKeywordsUseCase()
+    }
+
+    val calculateScoreUseCase = remember {
+        CalculateScoreUseCase()
+    }
+
+    val analyzeResumeUseCase = remember {
+        AnalyzeResumeUseCase(
+            extractKeywordsUseCase = extractKeywordsUseCase,
+            calculateScoreUseCase = calculateScoreUseCase
+        )
+    }
+
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -70,6 +109,8 @@ fun ResumeScreen() {
 
             extractedText = ""
             extractionError = null
+            analysisResult = null
+            analysisError = null
         }
     }
 
@@ -77,7 +118,6 @@ fun ResumeScreen() {
 
         val uri = selectedFileUri ?: return@LaunchedEffect
 
-        // Currently we support PDF extraction.
         if (selectedFileName?.endsWith(
                 ".pdf",
                 ignoreCase = true
@@ -194,6 +234,10 @@ fun ResumeScreen() {
                 )
             }
 
+            /*
+             * JOB DESCRIPTION
+             */
+
             if (extractedText.isNotBlank()) {
 
                 Spacer(
@@ -201,7 +245,7 @@ fun ResumeScreen() {
                 )
 
                 Text(
-                    text = "Extracted Resume Text",
+                    text = "Job Description",
                     style = MaterialTheme.typography.titleLarge
                 )
 
@@ -209,11 +253,175 @@ fun ResumeScreen() {
                     modifier = Modifier.height(8.dp)
                 )
 
+                OutlinedTextField(
+                    value = jobDescription,
+                    onValueChange = {
+                        jobDescription = it
+                        analysisResult = null
+                        analysisError = null
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 7,
+                    label = {
+                        Text("Paste the job description")
+                    },
+                    placeholder = {
+                        Text(
+                            "Paste the job description here..."
+                        )
+                    }
+                )
+
+                Spacer(
+                    modifier = Modifier.height(16.dp)
+                )
+
+                Button(
+                    onClick = {
+
+                        isAnalyzing = true
+                        analysisError = null
+
+                        try {
+
+                            analysisResult =
+                                analyzeResumeUseCase(
+                                    resumeText = extractedText,
+                                    jobDescription = jobDescription
+                                )
+
+                        } catch (e: Exception) {
+
+                            analysisResult = null
+
+                            analysisError =
+                                e.message
+                                    ?: "Unable to analyze resume."
+
+                        } finally {
+
+                            isAnalyzing = false
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = jobDescription.isNotBlank() &&
+                            !isAnalyzing
+                ) {
+
+                    if (isAnalyzing) {
+
+                        CircularProgressIndicator(
+                            modifier = Modifier.height(20.dp)
+                        )
+
+                    } else {
+
+                        Text("Analyze Resume")
+                    }
+                }
+            }
+
+            analysisError?.let { error ->
+
+                Spacer(
+                    modifier = Modifier.height(12.dp)
+                )
+
                 Text(
-                    text = extractedText,
-                    style = MaterialTheme.typography.bodyMedium
+                    text = error,
+                    color = MaterialTheme.colorScheme.error
                 )
             }
+
+            /*
+             * ATS RESULT
+             */
+
+            analysisResult?.let { result ->
+
+                Spacer(
+                    modifier = Modifier.height(24.dp)
+                )
+
+                AtsResultCard(result)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AtsResultCard(
+    result: AtsAnalysisResult
+) {
+
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+
+        Column(
+            modifier = Modifier.padding(20.dp)
+        ) {
+
+            Text(
+                text = "ATS Analysis",
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            Spacer(
+                modifier = Modifier.height(16.dp)
+            )
+
+            Text(
+                text = "${result.score}%",
+                style = MaterialTheme.typography.displaySmall
+            )
+
+            Text(
+                text = "ATS Match Score",
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(
+                modifier = Modifier.height(20.dp)
+            )
+
+            Text(
+                text = "Matched Keywords",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(
+                modifier = Modifier.height(8.dp)
+            )
+
+            Text(
+                text = if (result.matchedKeywords.isNotEmpty()) {
+                    result.matchedKeywords.joinToString(", ")
+                } else {
+                    "No matching keywords found."
+                }
+            )
+
+            Spacer(
+                modifier = Modifier.height(20.dp)
+            )
+
+            Text(
+                text = "Missing Keywords",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(
+                modifier = Modifier.height(8.dp)
+            )
+
+            Text(
+                text = if (result.missingKeywords.isNotEmpty()) {
+                    result.missingKeywords.joinToString(", ")
+                } else {
+                    "No missing keywords found."
+                }
+            )
         }
     }
 }
@@ -236,7 +444,9 @@ private fun getFileName(
         if (cursor.moveToFirst()) {
 
             val nameIndex =
-                cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                cursor.getColumnIndex(
+                    OpenableColumns.DISPLAY_NAME
+                )
 
             if (nameIndex >= 0) {
                 fileName = cursor.getString(nameIndex)
