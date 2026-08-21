@@ -11,17 +11,24 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import com.careerpilot.ai.feature.resume.data.ResumeTextExtractor
 import com.careerpilot.ai.ui.components.CPGradientBackground
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun ResumeScreen() {
@@ -36,6 +43,18 @@ fun ResumeScreen() {
         mutableStateOf<Uri?>(null)
     }
 
+    var extractedText by remember {
+        mutableStateOf("")
+    }
+
+    var isExtracting by remember {
+        mutableStateOf(false)
+    }
+
+    var extractionError by remember {
+        mutableStateOf<String?>(null)
+    }
+
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -48,6 +67,47 @@ fun ResumeScreen() {
                 context = context,
                 uri = it
             )
+
+            extractedText = ""
+            extractionError = null
+        }
+    }
+
+    LaunchedEffect(selectedFileUri) {
+
+        val uri = selectedFileUri ?: return@LaunchedEffect
+
+        // Currently we support PDF extraction.
+        if (selectedFileName?.endsWith(
+                ".pdf",
+                ignoreCase = true
+            ) != true
+        ) {
+            extractionError = "Please select a PDF resume for now."
+            return@LaunchedEffect
+        }
+
+        isExtracting = true
+        extractionError = null
+
+        try {
+
+            val extractor = ResumeTextExtractor(context)
+
+            extractedText = withContext(Dispatchers.IO) {
+                extractor.extractText(uri)
+            }
+
+        } catch (e: Exception) {
+
+            extractedText = ""
+
+            extractionError =
+                e.message ?: "Unable to extract text from the resume."
+
+        } finally {
+
+            isExtracting = false
         }
     }
 
@@ -56,7 +116,8 @@ fun ResumeScreen() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp),
+                .padding(20.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.Top
         ) {
 
@@ -100,6 +161,56 @@ fun ResumeScreen() {
 
                 Text(
                     text = "Resume selected successfully ✓",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            Spacer(
+                modifier = Modifier.height(16.dp)
+            )
+
+            if (isExtracting) {
+
+                CircularProgressIndicator()
+
+                Spacer(
+                    modifier = Modifier.height(12.dp)
+                )
+
+                Text(
+                    text = "Reading your resume..."
+                )
+            }
+
+            extractionError?.let { error ->
+
+                Spacer(
+                    modifier = Modifier.height(12.dp)
+                )
+
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
+            if (extractedText.isNotBlank()) {
+
+                Spacer(
+                    modifier = Modifier.height(24.dp)
+                )
+
+                Text(
+                    text = "Extracted Resume Text",
+                    style = MaterialTheme.typography.titleLarge
+                )
+
+                Spacer(
+                    modifier = Modifier.height(8.dp)
+                )
+
+                Text(
+                    text = extractedText,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
