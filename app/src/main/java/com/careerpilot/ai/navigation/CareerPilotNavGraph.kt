@@ -64,6 +64,8 @@ fun CareerPilotNavGraph() {
 
         composable(Routes.FORGOT_PASSWORD) {
             ForgotPasswordScreen(navController = navController)
+
+
         }
     }
 }

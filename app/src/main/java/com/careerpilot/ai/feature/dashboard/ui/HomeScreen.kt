@@ -20,8 +20,6 @@ import com.careerpilot.ai.feature.dashboard.viewmodel.DashboardViewModel
 import com.careerpilot.ai.ui.components.GreetingCard
 import com.careerpilot.ai.ui.components.CareerOverview
 import androidx.navigation.NavController
-import com.careerpilot.ai.navigation.Routes
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,6 +78,8 @@ fun HomeScreen(
                     }
                 )
             }
+
+
         }
     }
 }

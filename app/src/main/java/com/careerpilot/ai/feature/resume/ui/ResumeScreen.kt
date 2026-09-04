@@ -34,6 +34,7 @@ import com.careerpilot.ai.feature.resume.model.AtsAnalysisResult
 import com.careerpilot.ai.feature.resume.usecase.AnalyzeResumeUseCase
 import com.careerpilot.ai.feature.resume.usecase.CalculateScoreUseCase
 import com.careerpilot.ai.feature.resume.usecase.ExtractKeywordsUseCase
+import com.careerpilot.ai.feature.resume.usecase.SkillDetector
 import com.careerpilot.ai.ui.components.CPGradientBackground
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -87,10 +88,15 @@ fun ResumeScreen() {
         CalculateScoreUseCase()
     }
 
+    val skillDetector = remember {
+        SkillDetector()
+    }
+
     val analyzeResumeUseCase = remember {
         AnalyzeResumeUseCase(
             extractKeywordsUseCase = extractKeywordsUseCase,
-            calculateScoreUseCase = calculateScoreUseCase
+            calculateScoreUseCase = calculateScoreUseCase,
+            skillDetector = skillDetector
         )
     }
 
@@ -353,11 +359,9 @@ fun ResumeScreen() {
 private fun AtsResultCard(
     result: AtsAnalysisResult
 ) {
-
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
-
         Column(
             modifier = Modifier.padding(20.dp)
         ) {
@@ -373,16 +377,112 @@ private fun AtsResultCard(
 
             Text(
                 text = "${result.score}%",
-                style = MaterialTheme.typography.displaySmall
+                style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.primary
             )
 
             Text(
-                text = "ATS Match Score",
+                text = "Overall ATS Score",
                 style = MaterialTheme.typography.bodyMedium
             )
 
             Spacer(
                 modifier = Modifier.height(20.dp)
+            )
+
+            Text(
+                text = "Keyword Match",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(
+                modifier = Modifier.height(4.dp)
+            )
+
+            Text(
+                text = "${result.keywordMatchPercentage}% of job-description keywords found in your resume"
+            )
+
+            Spacer(
+                modifier = Modifier.height(20.dp)
+            )
+
+            Spacer(
+                modifier = Modifier.height(20.dp)
+            )
+
+            Text(
+                text = "Skills Match",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(
+                modifier = Modifier.height(4.dp)
+            )
+
+            val totalSkills =
+                result.matchedSkills.size + result.missingSkills.size
+
+            val skillsMatchPercentage =
+                if (totalSkills == 0) {
+                    0
+                } else {
+                    (
+                            result.matchedSkills.size.toDouble() /
+                                    totalSkills.toDouble() * 100
+                            ).toInt()
+                        .coerceIn(0, 100)
+                }
+
+            Text(
+                text = "$skillsMatchPercentage% of detected job skills found in your resume"
+            )
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            Text(
+                text = "Matched Skills",
+                style = MaterialTheme.typography.titleSmall
+            )
+
+            Spacer(
+                modifier = Modifier.height(6.dp)
+            )
+
+            Text(
+                text = if (result.matchedSkills.isEmpty()) {
+                    "No matching skills detected."
+                } else {
+                    result.matchedSkills.joinToString(", ")
+                }
+            )
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            Text(
+                text = "Missing Skills",
+                style = MaterialTheme.typography.titleSmall
+            )
+
+            Spacer(
+                modifier = Modifier.height(6.dp)
+            )
+
+            Text(
+                text = if (result.missingSkills.isEmpty()) {
+                    "No missing skills detected."
+                } else {
+                    result.missingSkills.joinToString(", ")
+                },
+                color = if (result.missingSkills.isEmpty()) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.error
+                }
             )
 
             Text(
@@ -394,13 +494,19 @@ private fun AtsResultCard(
                 modifier = Modifier.height(8.dp)
             )
 
-            Text(
-                text = if (result.matchedKeywords.isNotEmpty()) {
-                    result.matchedKeywords.joinToString(", ")
-                } else {
-                    "No matching keywords found."
-                }
-            )
+            if (result.matchedKeywords.isEmpty()) {
+
+                Text(
+                    text = "No matching keywords found.",
+                    color = MaterialTheme.colorScheme.error
+                )
+
+            } else {
+
+                Text(
+                    text = result.matchedKeywords.joinToString(", ")
+                )
+            }
 
             Spacer(
                 modifier = Modifier.height(20.dp)
@@ -415,13 +521,19 @@ private fun AtsResultCard(
                 modifier = Modifier.height(8.dp)
             )
 
-            Text(
-                text = if (result.missingKeywords.isNotEmpty()) {
-                    result.missingKeywords.joinToString(", ")
-                } else {
-                    "No missing keywords found."
-                }
-            )
+            if (result.missingKeywords.isEmpty()) {
+
+                Text(
+                    text = "Excellent! No missing keywords detected."
+                )
+
+            } else {
+
+                Text(
+                    text = result.missingKeywords.joinToString(", "),
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
         }
     }
 }
