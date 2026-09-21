@@ -65,6 +65,7 @@ dependencies {
 
     // Compose BOM
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.junit.ktx)
     androidTestImplementation(platform(libs.androidx.compose.bom))
 
     // Android Core
@@ -105,6 +106,7 @@ dependencies {
     implementation("com.google.firebase:firebase-appcheck-debug")
 
     implementation(libs.pdfbox.android)
+    implementation(kotlin("test"))
 
 
 }
