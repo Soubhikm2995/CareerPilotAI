@@ -1,6 +1,5 @@
 import java.util.Properties
 
-
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
 
@@ -10,7 +9,11 @@ if (localPropertiesFile.exists()) {
     }
 }
 
-val geminiApiKey = localProperties.getProperty("GEMINI_API_KEY", "")
+val geminiApiKey =
+    localProperties.getProperty("GEMINI_API_KEY", "")
+
+val openRouterApiKey =
+    localProperties.getProperty("OPENROUTER_API_KEY", "")
 
 plugins {
     alias(libs.plugins.android.application)
@@ -31,11 +34,19 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner =
+            "androidx.test.runner.AndroidJUnitRunner"
+
         buildConfigField(
             "String",
             "GEMINI_API_KEY",
             "\"$geminiApiKey\""
+        )
+
+        buildConfigField(
+            "String",
+            "OPENROUTER_API_KEY",
+            "\"$openRouterApiKey\""
         )
     }
 
@@ -44,7 +55,9 @@ android {
             isMinifyEnabled = false
 
             proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
+                getDefaultProguardFile(
+                    "proguard-android-optimize.txt"
+                ),
                 "proguard-rules.pro"
             )
         }
@@ -66,7 +79,9 @@ dependencies {
     // Compose BOM
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.junit.ktx)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(
+        platform(libs.androidx.compose.bom)
+    )
 
     // Android Core
     implementation(libs.androidx.core.ktx)
@@ -78,7 +93,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation(
+        "androidx.compose.material:material-icons-extended"
+    )
 
     // Navigation
     implementation(libs.androidx.navigation.compose)
@@ -93,20 +110,35 @@ dependencies {
 
     // Android Test
     androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(
+        libs.androidx.espresso.core
+    )
+    androidTestImplementation(
+        libs.androidx.compose.ui.test.junit4
+    )
 
     // Debug
     debugImplementation(libs.androidx.compose.ui.tooling)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
+    debugImplementation(
+        libs.androidx.compose.ui.test.manifest
+    )
 
+    // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation("com.google.firebase:firebase-ai")
-    implementation("com.google.firebase:firebase-appcheck-debug")
+    implementation(
+        "com.google.firebase:firebase-appcheck-debug"
+    )
 
+    // OpenRouter
+    implementation(
+        "com.squareup.okhttp3:okhttp:5.1.0"
+    )
+
+    // PDF
     implementation(libs.pdfbox.android)
+
+    // Kotlin Test
     implementation(kotlin("test"))
-
-
 }

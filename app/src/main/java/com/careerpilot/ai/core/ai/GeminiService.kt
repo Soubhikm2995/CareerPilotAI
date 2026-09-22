@@ -7,13 +7,15 @@ import kotlinx.coroutines.delay
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
-class GeminiService @Inject constructor() {
+class GeminiService @Inject constructor() : AiProvider {
 
     private val model = Firebase.ai(
         backend = GenerativeBackend.googleAI()
     ).generativeModel("gemini-3.8-flash")
 
-    suspend fun generateText(prompt: String): String {
+    override suspend fun generateText(
+        prompt: String
+    ): String {
 
         var lastException: Exception? = null
 
@@ -33,6 +35,7 @@ class GeminiService @Inject constructor() {
                 lastException = e
 
                 if (attempt < 2) {
+
                     delay(
                         when (attempt) {
                             0 -> 2.seconds
