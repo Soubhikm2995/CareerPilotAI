@@ -29,20 +29,32 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.careerpilot.ai.feature.resume.data.ResumeTextExtractor
 import com.careerpilot.ai.feature.resume.model.AtsAnalysisResult
 import com.careerpilot.ai.feature.resume.usecase.AnalyzeResumeUseCase
+import com.careerpilot.ai.feature.resume.usecase.CalculateAiAtsScoreUseCase
 import com.careerpilot.ai.feature.resume.usecase.CalculateScoreUseCase
 import com.careerpilot.ai.feature.resume.usecase.ExtractKeywordsUseCase
 import com.careerpilot.ai.feature.resume.usecase.SkillDetector
+import com.careerpilot.ai.feature.resume.viewmodel.ResumeViewModel
 import com.careerpilot.ai.ui.components.CPGradientBackground
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Composable
-fun ResumeScreen() {
+fun ResumeScreen(
+    viewModel: ResumeViewModel = hiltViewModel()
+) {
 
     val context = LocalContext.current
+
+    val aiState by viewModel.aiState.collectAsStateWithLifecycle()
+
+    val calculateAiAtsScoreUseCase = remember {
+        CalculateAiAtsScoreUseCase()
+    }
 
     var selectedFileName by remember {
         mutableStateOf<String?>(null)
@@ -117,6 +129,8 @@ fun ResumeScreen() {
             extractionError = null
             analysisResult = null
             analysisError = null
+
+            viewModel.clearAiResult()
         }
     }
 
@@ -124,7 +138,8 @@ fun ResumeScreen() {
 
         val uri = selectedFileUri ?: return@LaunchedEffect
 
-        if (selectedFileName?.endsWith(
+        if (
+            selectedFileName?.endsWith(
                 ".pdf",
                 ignoreCase = true
             ) != true
@@ -149,7 +164,8 @@ fun ResumeScreen() {
             extractedText = ""
 
             extractionError =
-                e.message ?: "Unable to extract text from the resume."
+                e.message
+                    ?: "Unable to extract text from the resume."
 
         } finally {
 
@@ -265,6 +281,7 @@ fun ResumeScreen() {
                         jobDescription = it
                         analysisResult = null
                         analysisError = null
+                        viewModel.clearAiResult()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 7,
@@ -296,6 +313,13 @@ fun ResumeScreen() {
                                     jobDescription = jobDescription
                                 )
 
+                            viewModel.analyzeWithAi(
+                                resumeText = extractedText,
+                                jobDescription = jobDescription
+                            )
+
+                            isAnalyzing = false
+
                         } catch (e: Exception) {
 
                             analysisResult = null
@@ -303,8 +327,6 @@ fun ResumeScreen() {
                             analysisError =
                                 e.message
                                     ?: "Unable to analyze resume."
-
-                        } finally {
 
                             isAnalyzing = false
                         }
@@ -340,7 +362,7 @@ fun ResumeScreen() {
             }
 
             /*
-             * ATS RESULT
+             * LOCAL ATS RESULT
              */
 
             analysisResult?.let { result ->
@@ -351,6 +373,286 @@ fun ResumeScreen() {
 
                 AtsResultCard(result)
             }
+
+            /*
+             * AI LOADING
+             */
+
+            if (aiState.isLoading) {
+
+                Spacer(
+                    modifier = Modifier.height(24.dp)
+                )
+
+                CircularProgressIndicator()
+
+                Spacer(
+                    modifier = Modifier.height(8.dp)
+                )
+
+                Text(
+                    text = "AI is analyzing your resume..."
+                )
+            }
+
+            /*
+             * AI ERROR
+             */
+
+            aiState.error?.let { error ->
+
+                Spacer(
+                    modifier = Modifier.height(12.dp)
+                )
+
+                Text(
+                    text = "AI Analysis Error: $error",
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
+            /*
+             * AI RESULT
+             */
+
+            aiState.result?.let { aiResult ->
+
+                Spacer(
+                    modifier = Modifier.height(24.dp)
+                )
+
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+
+                    Column(
+                        modifier = Modifier.padding(20.dp)
+                    ) {
+
+                        Text(
+                            text = "AI Resume Analysis",
+                            style = MaterialTheme.typography.titleLarge
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(16.dp)
+                        )
+
+                        /*
+                         * AI ATS SCORE
+                         */
+
+                        val aiAtsScore =
+                            calculateAiAtsScoreUseCase(aiResult)
+
+                        Text(
+                            text = "$aiAtsScore%",
+                            style = MaterialTheme.typography.displaySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        Text(
+                            text = "AI ATS Score",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(20.dp)
+                        )
+
+                        /*
+                         * SKILLS
+                         */
+
+                        Text(
+                            text = "Skills",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(6.dp)
+                        )
+
+                        Text(
+                            text = if (aiResult.skills.isEmpty()) {
+                                "No skills identified."
+                            } else {
+                                aiResult.skills.joinToString(", ")
+                            }
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(16.dp)
+                        )
+
+                        /*
+                         * MATCHED SKILLS
+                         */
+
+                        Text(
+                            text = "Matched Skills",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(6.dp)
+                        )
+
+                        Text(
+                            text = if (aiResult.matchedSkills.isEmpty()) {
+                                "No matching skills identified."
+                            } else {
+                                aiResult.matchedSkills.joinToString(", ")
+                            }
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(16.dp)
+                        )
+
+                        /*
+                         * MISSING SKILLS
+                         */
+
+                        Text(
+                            text = "Missing Skills",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(6.dp)
+                        )
+
+                        Text(
+                            text = if (aiResult.missingSkills.isEmpty()) {
+                                "No missing skills identified."
+                            } else {
+                                aiResult.missingSkills.joinToString(", ")
+                            },
+                            color = if (aiResult.missingSkills.isEmpty()) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            }
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(16.dp)
+                        )
+
+                        /*
+                         * MATCHED KEYWORDS
+                         */
+
+                        Text(
+                            text = "Matched Keywords",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(6.dp)
+                        )
+
+                        Text(
+                            text = if (aiResult.matchedKeywords.isEmpty()) {
+                                "No matching keywords identified."
+                            } else {
+                                aiResult.matchedKeywords.joinToString(", ")
+                            }
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(16.dp)
+                        )
+
+                        /*
+                         * MISSING KEYWORDS
+                         */
+
+                        Text(
+                            text = "Missing Keywords",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(6.dp)
+                        )
+
+                        Text(
+                            text = if (aiResult.missingKeywords.isEmpty()) {
+                                "No missing keywords identified."
+                            } else {
+                                aiResult.missingKeywords.joinToString(", ")
+                            },
+                            color = if (aiResult.missingKeywords.isEmpty()) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            }
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(16.dp)
+                        )
+
+                        /*
+                         * EXPERIENCE REQUIREMENTS
+                         */
+
+                        Text(
+                            text = "Experience Requirements",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(6.dp)
+                        )
+
+                        Text(
+                            text = if (
+                                aiResult.experienceRequirements.isEmpty()
+                            ) {
+                                "No specific experience requirements identified."
+                            } else {
+                                aiResult.experienceRequirements.joinToString(
+                                    separator = "\n• ",
+                                    prefix = "• "
+                                )
+                            }
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(16.dp)
+                        )
+
+                        /*
+                         * EDUCATION REQUIREMENTS
+                         */
+
+                        Text(
+                            text = "Education Requirements",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(6.dp)
+                        )
+
+                        Text(
+                            text = if (
+                                aiResult.educationRequirements.isEmpty()
+                            ) {
+                                "No specific education requirements identified."
+                            } else {
+                                aiResult.educationRequirements.joinToString(
+                                    separator = "\n• ",
+                                    prefix = "• "
+                                )
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -359,9 +661,11 @@ fun ResumeScreen() {
 private fun AtsResultCard(
     result: AtsAnalysisResult
 ) {
+
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
+
         Column(
             modifier = Modifier.padding(20.dp)
         ) {
@@ -390,6 +694,10 @@ private fun AtsResultCard(
                 modifier = Modifier.height(20.dp)
             )
 
+            /*
+             * KEYWORD MATCH
+             */
+
             Text(
                 text = "Keyword Match",
                 style = MaterialTheme.typography.titleMedium
@@ -407,9 +715,9 @@ private fun AtsResultCard(
                 modifier = Modifier.height(20.dp)
             )
 
-            Spacer(
-                modifier = Modifier.height(20.dp)
-            )
+            /*
+             * SKILLS MATCH
+             */
 
             Text(
                 text = "Skills Match",
@@ -421,7 +729,8 @@ private fun AtsResultCard(
             )
 
             val totalSkills =
-                result.matchedSkills.size + result.missingSkills.size
+                result.matchedSkills.size +
+                        result.missingSkills.size
 
             val skillsMatchPercentage =
                 if (totalSkills == 0) {
@@ -429,7 +738,8 @@ private fun AtsResultCard(
                 } else {
                     (
                             result.matchedSkills.size.toDouble() /
-                                    totalSkills.toDouble() * 100
+                                    totalSkills.toDouble() *
+                                    100
                             ).toInt()
                         .coerceIn(0, 100)
                 }
@@ -441,6 +751,10 @@ private fun AtsResultCard(
             Spacer(
                 modifier = Modifier.height(12.dp)
             )
+
+            /*
+             * MATCHED SKILLS
+             */
 
             Text(
                 text = "Matched Skills",
@@ -463,6 +777,10 @@ private fun AtsResultCard(
                 modifier = Modifier.height(12.dp)
             )
 
+            /*
+             * MISSING SKILLS
+             */
+
             Text(
                 text = "Missing Skills",
                 style = MaterialTheme.typography.titleSmall
@@ -484,6 +802,14 @@ private fun AtsResultCard(
                     MaterialTheme.colorScheme.error
                 }
             )
+
+            Spacer(
+                modifier = Modifier.height(16.dp)
+            )
+
+            /*
+             * MATCHED KEYWORDS
+             */
 
             Text(
                 text = "Matched Keywords",
@@ -511,6 +837,10 @@ private fun AtsResultCard(
             Spacer(
                 modifier = Modifier.height(20.dp)
             )
+
+            /*
+             * MISSING KEYWORDS
+             */
 
             Text(
                 text = "Missing Keywords",

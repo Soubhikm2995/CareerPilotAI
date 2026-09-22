@@ -2,8 +2,9 @@ package com.careerpilot.ai.feature.resume.data
 
 import com.careerpilot.ai.feature.resume.model.AiResumeAnalysis
 import org.json.JSONObject
+import javax.inject.Inject
 
-class AiResumeAnalysisParser {
+class AiResumeAnalysisParser @Inject constructor() {
 
     fun parse(jsonText: String): AiResumeAnalysis {
 
